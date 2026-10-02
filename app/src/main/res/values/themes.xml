@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.AmoledMusic" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/black_amoled</item>
+        <item name="android:statusBarColor">@color/black_amoled</item>
+        <item name="android:navigationBarColor">@color/black_amoled</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+</resources>

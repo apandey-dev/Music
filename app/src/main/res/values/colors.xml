@@ -1,0 +1,13 @@
+<resources>
+    <color name="black_amoled">#000000</color>
+    <color name="white_pure">#FFFFFF</color>
+    <color name="surface_dark">#121212</color>
+    <color name="surface_variant">#1C1C1E</color>
+    <color name="surface_border">#2C2C2E</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#8E8E93</color>
+    <color name="text_tertiary">#636366</color>
+    <color name="accent_white">#F2F2F7</color>
+    <color name="app_icon_bg">#FFFFFF</color>
+    <color name="app_icon_fg">#111111</color>
+</resources>
