@@ -59,7 +59,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             playbackState.collect { state ->
                 val song = state.currentSong
-                val title = song?.title ?: "Amoled Music"
+                val title = song?.title ?: "Music"
                 val subtitle = if (song != null) "${song.artist} • ${state.currentPlaylistName}" else "Tap to play"
                 PlaylistWidgetProvider.updateAllWidgets(
                     context = getApplication(),

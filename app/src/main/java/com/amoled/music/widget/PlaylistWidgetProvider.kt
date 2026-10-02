@@ -17,7 +17,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId, "Amoled Music", "Tap to open player", null, false)
+            updateAppWidget(context, appWidgetManager, appWidgetId, "Music", "Tap to open player", null, false)
         }
     }
 

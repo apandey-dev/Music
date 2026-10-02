@@ -1,8 +1,8 @@
-# 🎵 AMOLED Music Player (Material 3 Expressive)
+# 🎵 Music (Material 3 Expressive Android Audio Player)
 
 <div align="center">
 
-<img src="screenshots/app-icon.png" width="128" height="128" alt="AMOLED Music Icon" />
+<img src="screenshots/app-icon.png" width="128" height="128" alt="Music App Icon" />
 
 ### **A Pure Black Minimalist Offline Audio Player with 1-Click Home Screen Playlists & Material 3 Fluid Design**
 
@@ -11,7 +11,7 @@
 [![Material 3](https://img.shields.io/badge/Material%203-Expressive-blue.svg?style=for-the-badge&logo=materialdesign)](https://m3.material.io)
 [![License](https://img.shields.io/badge/License-Apache%202.0-black.svg?style=for-the-badge)](LICENSE)
 
-[**Download Latest Release**](https://github.com/apandey-dev/AmoledMusic/releases) • [**Features**](#-features) • [**Screenshots**](#-screenshots) • [**Architecture**](#-architecture--tech-stack) • [**Contributing**](#-contributing)
+[**Download Latest Release**](https://github.com/apandey-dev/Music/releases) • [**Features**](#-features) • [**Screenshots**](#-screenshots) • [**Architecture**](#-architecture--tech-stack) • [**Contributing**](#-contributing)
 
 </div>
 
@@ -122,10 +122,10 @@ com.amoled.music
 ### Clone & Build
 ```bash
 # Clone the repository
-git clone https://github.com/apandey-dev/AmoledMusic.git
+git clone https://github.com/apandey-dev/Music.git
 
 # Navigate to directory
-cd AmoledMusic
+cd Music
 
 # Build Debug APK
 ./gradlew assembleDebug
@@ -150,7 +150,7 @@ Contributions, bug reports, and feature requests are warmly welcomed!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-Feel free to open an [Issue](https://github.com/apandey-dev/AmoledMusic/issues) to report bugs or request new features.
+Feel free to open an [Issue](https://github.com/apandey-dev/Music/issues) to report bugs or request new features.
 
 ---
 

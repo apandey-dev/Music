@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Amoled Music</string>
+    <string name="app_name">Music</string>
     <string name="my_groups">My Playlists</string>
     <string name="create_group">New Playlist</string>
     <string name="add_songs">Choose Songs</string>
@@ -17,5 +17,5 @@
     <string name="no_songs_found">No music files found on device</string>
     <string name="permission_required">Storage / Audio permission is required to find and play your music files.</string>
     <string name="grant_permission">Grant Permission</string>
-    <string name="widget_description">Amoled Music quick playlist launcher and controller</string>
+    <string name="widget_description">Music quick playlist launcher and controller</string>
 </resources>

@@ -201,14 +201,14 @@ fun MainAppContent(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Amoled Music",
+                    text = "Music",
                     color = AmoledTextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Audio permission is needed to scan and play music stored on your device in pure AMOLED style.",
+                    text = "Audio permission is needed to scan and play music stored on your device.",
                     color = AmoledTextSecondary,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,

@@ -76,7 +76,7 @@ class MusicPlaybackService : MediaSessionService() {
                 "Music Playback",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "AMOLED Music Player foreground playback notification"
+                description = "Music Player foreground playback notification"
                 setShowBadge(false)
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
             }
