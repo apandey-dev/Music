@@ -60,27 +60,35 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center">
-        <img src="screenshots/player-preview.png" width="220" alt="Full Player Screen" /><br/>
+      <td align="center" width="33%">
+        <img src="screenshots/1_full_player.png" width="220" alt="Full Player Screen" /><br/>
         <b>Expressive Full Player</b>
       </td>
-      <td align="center">
-        <img src="screenshots/screenshot1.png" width="220" onerror="this.src='screenshots/player-preview.png'" alt="Songs Tab" /><br/>
-        <b>All Songs & Quick Search</b>
+      <td align="center" width="33%">
+        <img src="screenshots/2_songs_tab.png" width="220" alt="Songs Tab" /><br/>
+        <b>Songs & Pill MiniPlayer</b>
       </td>
-      <td align="center">
-        <img src="screenshots/screenshot2.png" width="220" onerror="this.src='screenshots/player-preview.png'" alt="Playlists Grid" /><br/>
-        <b>Playlists & Home Shortcuts</b>
+      <td align="center" width="33%">
+        <img src="screenshots/3_slide_play_next.png" width="220" alt="Slide Actions" /><br/>
+        <b>Slide Right to Play Next</b>
       </td>
-      <td align="center">
-        <img src="screenshots/screenshot3.png" width="220" onerror="this.src='screenshots/player-preview.png'" alt="Queue Actions" /><br/>
-        <b>Queue & Dual Slide Actions</b>
+    </tr>
+    <tr>
+      <td align="center" width="33%">
+        <img src="screenshots/4_playlist_detail.png" width="220" alt="Playlist Detail" /><br/>
+        <b>Custom Playlist & Banner</b>
+      </td>
+      <td align="center" width="33%">
+        <img src="screenshots/5_pin_shortcut_dialog.png" width="220" alt="Pin Shortcut Dialog" /><br/>
+        <b>Pin 1-Click Home Shortcut</b>
+      </td>
+      <td align="center" width="33%">
+        <img src="screenshots/6_home_screen_shortcut.png" width="220" alt="Home Screen Shortcut" /><br/>
+        <b>Instant 1-Click Home Playback</b>
       </td>
     </tr>
   </table>
 </div>
-
-> *Tip: You can replace or add your own screenshot samples in the `screenshots/` directory.*
 
 ---
 
