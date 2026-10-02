@@ -54,6 +54,10 @@ class MusicRepository(private val context: Context) {
         return entity.toPlaylist(songCount = songs.size)
     }
 
+    suspend fun getSongsForPlaylist(playlistId: Long): List<Song> {
+        return playlistDao.getPlaylistSongs(playlistId).map { it.toSong() }
+    }
+
     suspend fun getPlaylistWithSongs(playlistId: Long): PlaylistWithSongs? {
         val entity = playlistDao.getPlaylistById(playlistId) ?: return null
         val songs = playlistDao.getPlaylistSongs(playlistId).map { it.toSong() }

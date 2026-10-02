@@ -71,6 +71,7 @@
                 <action android:name="com.amoled.music.ACTION_PLAY_PLAYLIST" />
                 <action android:name="com.amoled.music.ACTION_TOGGLE_PLAY" />
                 <action android:name="com.amoled.music.ACTION_NEXT_TRACK" />
+                <action android:name="com.amoled.music.ACTION_PREV_TRACK" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
