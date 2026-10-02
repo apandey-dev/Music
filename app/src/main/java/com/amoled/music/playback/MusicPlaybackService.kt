@@ -28,6 +28,7 @@ import com.amoled.music.widget.PlaylistWidgetProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -321,12 +322,32 @@ class MusicPlaybackService : MediaSessionService() {
         return mediaSession
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (::player.isInitialized) {
+            player.pause()
+            player.stop()
+            player.clearMediaItems()
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        notificationManager?.cancel(NOTIFICATION_ID)
+        updateWidgets()
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
-        mediaSession?.run {
+        serviceScope.cancel()
+        if (::player.isInitialized) {
+            player.stop()
             player.release()
+        }
+        mediaSession?.run {
             release()
             mediaSession = null
         }
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        notificationManager?.cancel(NOTIFICATION_ID)
         super.onDestroy()
     }
 }
