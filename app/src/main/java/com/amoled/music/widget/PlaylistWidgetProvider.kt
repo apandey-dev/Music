@@ -17,12 +17,18 @@ import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.SizeF
 import android.widget.RemoteViews
 import androidx.core.content.ContextCompat
 import com.amoled.music.MainActivity
 import com.amoled.music.R
 import com.amoled.music.playback.MusicPlaybackService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PlaylistWidgetProvider : AppWidgetProvider() {
 
@@ -33,8 +39,13 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
         val bannerUri = prefs.getString("banner_uri", null)
         val isPlaying = prefs.getBoolean("is_playing", false)
 
-        for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId, title, subtitle, bannerUri, isPlaying)
+        widgetScope.launch {
+            val roundedBanner = loadRoundedBitmap(context, bannerUri)
+            withContext(Dispatchers.Main) {
+                for (appWidgetId in appWidgetIds) {
+                    applyWidgetViews(context, appWidgetManager, appWidgetId, title, subtitle, roundedBanner, isPlaying)
+                }
+            }
         }
     }
 
@@ -50,7 +61,12 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
         val bannerUri = prefs.getString("banner_uri", null)
         val isPlaying = prefs.getBoolean("is_playing", false)
 
-        updateAppWidget(context, appWidgetManager, appWidgetId, title, subtitle, bannerUri, isPlaying)
+        widgetScope.launch {
+            val roundedBanner = loadRoundedBitmap(context, bannerUri)
+            withContext(Dispatchers.Main) {
+                applyWidgetViews(context, appWidgetManager, appWidgetId, title, subtitle, roundedBanner, isPlaying)
+            }
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -66,21 +82,27 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
                 try {
                     ContextCompat.startForegroundService(context, serviceIntent)
                 } catch (e: Exception) {
+                    Log.w(TAG, "startForegroundService failed, attempting startService: ${e.message}")
                     try {
                         context.startService(serviceIntent)
-                    } catch (_: Exception) {}
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "Failed to route widget action to MusicPlaybackService: ${e2.message}", e2)
+                    }
                 }
             }
         }
     }
 
     companion object {
+        private const val TAG = "PlaylistWidget"
         const val PREFS_NAME = "music_widget_prefs"
         const val ACTION_PLAY_PLAYLIST = "com.amoled.music.ACTION_PLAY_PLAYLIST"
         const val ACTION_TOGGLE_PLAY = "com.amoled.music.ACTION_TOGGLE_PLAY"
         const val ACTION_NEXT_TRACK = "com.amoled.music.ACTION_NEXT_TRACK"
         const val ACTION_PREV_TRACK = "com.amoled.music.ACTION_PREV_TRACK"
         const val EXTRA_PLAYLIST_ID = "extra_playlist_id"
+
+        private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         fun updateAppWidget(
             context: Context,
@@ -91,28 +113,48 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             bannerUriString: String?,
             isPlaying: Boolean
         ) {
-            val roundedBanner = loadRoundedBitmap(context, bannerUriString)
-
-            val compactViews = buildCompactViews(context, title, subtitle, roundedBanner, isPlaying)
-            val expandedViews = buildExpandedViews(context, title, subtitle, roundedBanner, isPlaying)
-
-            val finalViews = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val viewMap = mapOf(
-                    SizeF(120f, 55f) to compactViews,
-                    SizeF(180f, 105f) to expandedViews
-                )
-                RemoteViews(viewMap)
-            } else {
-                val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
-                val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
-                if (minHeight >= 95) expandedViews else compactViews
+            widgetScope.launch {
+                val roundedBanner = loadRoundedBitmap(context, bannerUriString)
+                withContext(Dispatchers.Main) {
+                    applyWidgetViews(context, appWidgetManager, appWidgetId, title, subtitle, roundedBanner, isPlaying)
+                }
             }
+        }
 
-            appWidgetManager.updateAppWidget(appWidgetId, finalViews)
+        private fun applyWidgetViews(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+            title: String,
+            subtitle: String,
+            roundedBanner: Bitmap?,
+            isPlaying: Boolean
+        ) {
+            try {
+                val compactViews = buildCompactViews(context, appWidgetId, title, subtitle, roundedBanner, isPlaying)
+                val expandedViews = buildExpandedViews(context, appWidgetId, title, subtitle, roundedBanner, isPlaying)
+
+                val finalViews = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val viewMap = mapOf(
+                        SizeF(120f, 55f) to compactViews,
+                        SizeF(180f, 105f) to expandedViews
+                    )
+                    RemoteViews(viewMap)
+                } else {
+                    val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+                    val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+                    if (minHeight >= 95) expandedViews else compactViews
+                }
+
+                appWidgetManager.updateAppWidget(appWidgetId, finalViews)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error applying widget views for id $appWidgetId: ${e.message}", e)
+            }
         }
 
         private fun buildCompactViews(
             context: Context,
+            appWidgetId: Int,
             title: String,
             subtitle: String,
             bannerBitmap: Bitmap?,
@@ -123,7 +165,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_title, title)
             views.setTextViewText(R.id.widget_subtitle, subtitle)
 
-            if (bannerBitmap != null) {
+            if (bannerBitmap != null && !bannerBitmap.isRecycled) {
                 views.setImageViewBitmap(R.id.widget_banner, bannerBitmap)
             } else {
                 views.setImageViewResource(R.id.widget_banner, R.drawable.ic_banner_placeholder)
@@ -134,13 +176,15 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
                 if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             )
 
+            val baseReq = appWidgetId * 10
+
             // Click body to open App
             val appIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pendingAppIntent = PendingIntent.getActivity(
                 context,
-                0,
+                baseReq,
                 appIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -152,7 +196,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             }
             val togglePending = PendingIntent.getBroadcast(
                 context,
-                1,
+                baseReq + 1,
                 toggleIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -164,7 +208,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             }
             val nextPending = PendingIntent.getBroadcast(
                 context,
-                2,
+                baseReq + 2,
                 nextIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -175,6 +219,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
 
         private fun buildExpandedViews(
             context: Context,
+            appWidgetId: Int,
             title: String,
             subtitle: String,
             bannerBitmap: Bitmap?,
@@ -185,7 +230,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_title, title)
             views.setTextViewText(R.id.widget_subtitle, subtitle)
 
-            if (bannerBitmap != null) {
+            if (bannerBitmap != null && !bannerBitmap.isRecycled) {
                 views.setImageViewBitmap(R.id.widget_banner, bannerBitmap)
             } else {
                 views.setImageViewResource(R.id.widget_banner, R.drawable.ic_banner_placeholder)
@@ -196,13 +241,15 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
                 if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             )
 
+            val baseReq = appWidgetId * 10
+
             // Click body to open App
             val appIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pendingAppIntent = PendingIntent.getActivity(
                 context,
-                0,
+                baseReq,
                 appIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -214,7 +261,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             }
             val prevPending = PendingIntent.getBroadcast(
                 context,
-                3,
+                baseReq + 3,
                 prevIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -226,7 +273,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             }
             val togglePending = PendingIntent.getBroadcast(
                 context,
-                1,
+                baseReq + 1,
                 toggleIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -238,7 +285,7 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             }
             val nextPending = PendingIntent.getBroadcast(
                 context,
-                2,
+                baseReq + 2,
                 nextIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -247,27 +294,54 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             return views
         }
 
+        private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+            val (height: Int, width: Int) = options.outHeight to options.outWidth
+            var inSampleSize = 1
+            if (height > reqHeight || width > reqWidth) {
+                val halfHeight = height / 2
+                val halfWidth = width / 2
+                while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                    inSampleSize *= 2
+                }
+            }
+            return inSampleSize
+        }
+
         private fun loadRoundedBitmap(context: Context, bannerUriString: String?): Bitmap? {
             if (bannerUriString.isNullOrBlank()) return null
             return try {
                 val uri = Uri.parse(bannerUriString)
-                val stream = context.contentResolver.openInputStream(uri)
-                val original = BitmapFactory.decodeStream(stream)
-                stream?.close()
-                if (original != null) {
-                    val size = 256
-                    val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(output)
-                    val paint = Paint().apply { isAntiAlias = true }
-                    val rect = Rect(0, 0, original.width, original.height)
-                    val rectF = RectF(0f, 0f, size.toFloat(), size.toFloat())
+                val targetSize = 256
 
-                    canvas.drawRoundRect(rectF, 40f, 40f, paint)
-                    paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
-                    canvas.drawBitmap(original, rect, rectF, paint)
-                    output
-                } else null
+                // Step 1: Decode bounds only
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream, null, options)
+                } ?: return null
+
+                // Step 2: Compute sample size
+                options.inSampleSize = calculateInSampleSize(options, targetSize, targetSize)
+                options.inJustDecodeBounds = false
+                options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+                // Step 3: Decode downsampled bitmap
+                val original = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream, null, options)
+                } ?: return null
+
+                val output = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(output)
+                val paint = Paint().apply { isAntiAlias = true }
+                val rect = Rect(0, 0, original.width, original.height)
+                val rectF = RectF(0f, 0f, targetSize.toFloat(), targetSize.toFloat())
+
+                canvas.drawRoundRect(rectF, 40f, 40f, paint)
+                paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+                canvas.drawBitmap(original, rect, rectF, paint)
+                original.recycle()
+                output
             } catch (e: Exception) {
+                Log.w(TAG, "Failed loading artwork bitmap for widget: ${e.message}")
                 null
             }
         }
@@ -279,7 +353,6 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             bannerUriString: String?,
             isPlaying: Boolean
         ) {
-            // Save state in SharedPreferences for subsequent system re-renders
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit()
                 .putString("title", title)
@@ -291,8 +364,16 @@ class PlaylistWidgetProvider : AppWidgetProvider() {
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val componentName = ComponentName(context, PlaylistWidgetProvider::class.java)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-            for (id in appWidgetIds) {
-                updateAppWidget(context, appWidgetManager, id, title, subtitle, bannerUriString, isPlaying)
+
+            if (appWidgetIds.isEmpty()) return
+
+            widgetScope.launch {
+                val roundedBanner = loadRoundedBitmap(context, bannerUriString)
+                withContext(Dispatchers.Main) {
+                    for (id in appWidgetIds) {
+                        applyWidgetViews(context, appWidgetManager, id, title, subtitle, roundedBanner, isPlaying)
+                    }
+                }
             }
         }
     }

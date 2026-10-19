@@ -22,8 +22,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddHome
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
@@ -66,7 +66,10 @@ import com.amoled.music.ui.theme.AmoledWhite
 fun PlaylistDetailScreen(
     playlist: Playlist,
     songs: List<Song>,
-    playbackState: PlaybackState,
+    playbackState: PlaybackState? = null,
+    currentSongId: Long? = playbackState?.currentSong?.id,
+    isPlaying: Boolean = playbackState?.isPlaying ?: false,
+    currentPlaylistId: Long? = playbackState?.currentPlaylistId,
     onBack: () -> Unit,
     onPlayAll: () -> Unit,
     onShuffleAll: () -> Unit,
@@ -145,7 +148,7 @@ fun PlaylistDetailScreen(
                                 .background(AmoledBlack.copy(alpha = 0.5f))
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
                                 tint = AmoledWhite
                             )
@@ -331,13 +334,13 @@ fun PlaylistDetailScreen(
                     }
                 }
             } else {
-                itemsIndexed(songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
-                    val isCurrent = playbackState.currentSong?.id == song.id &&
-                            playbackState.currentPlaylistId == playlist.id
+                itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+                    val isCurrent = currentSongId == song.id &&
+                            currentPlaylistId == playlist.id
                     SongItem(
                         song = song,
                         isCurrentTrack = isCurrent,
-                        isPlaying = isCurrent && playbackState.isPlaying,
+                        isPlaying = isCurrent && isPlaying,
                         onClick = { onSongClick(index) }
                     )
                     Spacer(modifier = Modifier.height(2.dp))

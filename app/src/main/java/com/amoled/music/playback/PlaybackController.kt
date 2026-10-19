@@ -83,8 +83,9 @@ class PlaybackController(private val context: Context) {
                 val title = metadata.title?.toString() ?: "Unknown"
                 val artist = metadata.artist?.toString() ?: "Unknown Artist"
                 val album = metadata.albumTitle?.toString() ?: "Unknown Album"
-                val artUri = metadata.artworkUri?.toString()
-                val uriStr = item.requestMetadata.mediaUri?.toString()
+                val artUri = extras?.getString("album_art_uri") ?: metadata.artworkUri?.toString()
+                val uriStr = extras?.getString("content_uri")
+                    ?: item.requestMetadata.mediaUri?.toString()
                     ?: item.localConfiguration?.uri?.toString()
                     ?: ""
                 val id = item.mediaId.toLongOrNull() ?: extras?.getLong("song_id") ?: (i.toLong() + 1)
@@ -150,9 +151,15 @@ class PlaybackController(private val context: Context) {
                     it.copy(
                         currentSong = song ?: it.currentSong,
                         currentTrackIndex = index,
-                        totalDurationMs = mediaController?.duration?.coerceAtLeast(0L) ?: (song?.duration ?: 0L)
+                        totalDurationMs = mediaController?.duration?.coerceAtLeast(0L) ?: (song?.duration ?: 0L),
+                        isPlaying = mediaController?.isPlaying ?: it.isPlaying
                     )
                 }
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                Log.e(TAG, "ExoPlayer controller error: ${error.message}", error)
+                updateState()
             }
 
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -180,8 +187,8 @@ class PlaybackController(private val context: Context) {
             artist = metadata.artist?.toString() ?: "Unknown Artist",
             album = metadata.albumTitle?.toString() ?: "Unknown Album",
             duration = extras?.getLong("duration") ?: 0L,
-            contentUriString = mediaItem.requestMetadata.mediaUri?.toString() ?: "",
-            albumArtUriString = metadata.artworkUri?.toString(),
+            contentUriString = extras?.getString("content_uri") ?: mediaItem.requestMetadata.mediaUri?.toString() ?: "",
+            albumArtUriString = extras?.getString("album_art_uri") ?: metadata.artworkUri?.toString(),
             dataPath = extras?.getString("data_path") ?: ""
         )
     }
@@ -247,6 +254,8 @@ class PlaybackController(private val context: Context) {
                 putLong("song_id", song.id)
                 putString("data_path", song.dataPath)
                 putLong("duration", song.duration)
+                putString("content_uri", song.contentUriString)
+                song.albumArtUriString?.let { putString("album_art_uri", it) }
                 putString("playlist_name", playlist.name)
                 putLong("playlist_id", playlist.id)
             }
@@ -328,8 +337,10 @@ class PlaybackController(private val context: Context) {
 
     fun seekTo(positionMs: Long) {
         val player = mediaController ?: return
-        player.seekTo(positionMs)
-        _playbackState.update { it.copy(currentPositionMs = positionMs) }
+        val maxDuration = if (player.duration > 0) player.duration else _playbackState.value.totalDurationMs
+        val safePos = positionMs.coerceIn(0L, maxDuration.coerceAtLeast(0L))
+        player.seekTo(safePos)
+        _playbackState.update { it.copy(currentPositionMs = safePos) }
     }
 
     fun toggleShuffle() {
@@ -367,6 +378,8 @@ class PlaybackController(private val context: Context) {
             putLong("song_id", song.id)
             putString("data_path", song.dataPath)
             putLong("duration", song.duration)
+            putString("content_uri", song.contentUriString)
+            song.albumArtUriString?.let { putString("album_art_uri", it) }
         }
 
         val metadata = MediaMetadata.Builder()
@@ -409,7 +422,7 @@ class PlaybackController(private val context: Context) {
             mutable.removeAt(index)
             currentPlaylistSongs = mutable
             player.removeMediaItem(index)
-            _playbackState.update { it.copy(queue = mutable) }
+            updateState()
         }
     }
 

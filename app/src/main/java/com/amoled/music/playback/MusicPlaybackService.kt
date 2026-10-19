@@ -6,15 +6,18 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -35,13 +38,16 @@ import kotlinx.coroutines.withContext
 @OptIn(UnstableApi::class)
 class MusicPlaybackService : MediaSessionService() {
 
+    private val TAG = "MusicPlaybackService"
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var consecutiveErrorCount = 0
 
     companion object {
         const val CHANNEL_ID = "music_playback_channel"
         const val NOTIFICATION_ID = 1001
+        const val ACTION_DISMISS_NOTIFICATION = "com.amoled.music.ACTION_DISMISS_NOTIFICATION"
     }
 
     override fun onCreate() {
@@ -74,30 +80,72 @@ class MusicPlaybackService : MediaSessionService() {
 
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    consecutiveErrorCount = 0
+                }
                 updateWidgets()
                 updateNotification()
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    startServiceForeground()
+                } else {
+                    stopForeground(STOP_FOREGROUND_DETACH)
+                }
                 updateWidgets()
                 updateNotification()
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                consecutiveErrorCount = 0
+                updateWidgets()
+                updateNotification()
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                Log.e(TAG, "ExoPlayer playback error [${error.errorCodeName}]: ${error.message}", error)
+                consecutiveErrorCount++
+                if (consecutiveErrorCount < 5 && player.hasNextMediaItem()) {
+                    player.seekToNextMediaItem()
+                    player.prepare()
+                    player.play()
+                } else {
+                    consecutiveErrorCount = 0
+                    player.pause()
+                }
                 updateWidgets()
                 updateNotification()
             }
         })
     }
 
+    private fun startServiceForeground() {
+        val notification = buildNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForeground(NOTIFICATION_ID, buildNotification())
-        }
-
         when (intent?.action) {
+            ACTION_DISMISS_NOTIFICATION -> {
+                if (!player.isPlaying) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    notificationManager?.cancel(NOTIFICATION_ID)
+                    stopSelf()
+                }
+                return START_NOT_STICKY
+            }
             PlaylistWidgetProvider.ACTION_TOGGLE_PLAY -> handleTogglePlay()
             PlaylistWidgetProvider.ACTION_NEXT_TRACK -> handleNext()
             PlaylistWidgetProvider.ACTION_PREV_TRACK -> handlePrevious()
@@ -105,6 +153,10 @@ class MusicPlaybackService : MediaSessionService() {
                 val playlistId = intent.getLongExtra(PlaylistWidgetProvider.EXTRA_PLAYLIST_ID, -1L)
                 handlePlayPlaylist(playlistId)
             }
+        }
+
+        if (player.isPlaying) {
+            startServiceForeground()
         }
 
         return START_STICKY
@@ -277,11 +329,19 @@ class MusicPlaybackService : MediaSessionService() {
             this, 12, prevIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val dismissIntent = Intent(this, MusicPlaybackService::class.java).apply {
+            action = ACTION_DISMISS_NOTIFICATION
+        }
+        val dismissPending = PendingIntent.getService(
+            this, 13, dismissIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_music_note)
             .setContentTitle(title)
             .setContentText(artist)
             .setContentIntent(openAppIntent)
+            .setDeleteIntent(dismissPending)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(player.isPlaying)
             .addAction(android.R.drawable.ic_media_previous, "Previous", prevPending)
@@ -323,17 +383,18 @@ class MusicPlaybackService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (::player.isInitialized) {
-            player.pause()
-            player.stop()
-            player.clearMediaItems()
-        }
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-        notificationManager?.cancel(NOTIFICATION_ID)
-        updateWidgets()
-        stopSelf()
         super.onTaskRemoved(rootIntent)
+        // Commercial-grade behavior: Keep playing music in background even if app task is swiped away!
+        // Only stop if playback is paused, idle, or ended.
+        if (::player.isInitialized) {
+            if (!player.isPlaying && player.playbackState != Player.STATE_BUFFERING) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                notificationManager?.cancel(NOTIFICATION_ID)
+                updateWidgets()
+                stopSelf()
+            }
+        }
     }
 
     override fun onDestroy() {

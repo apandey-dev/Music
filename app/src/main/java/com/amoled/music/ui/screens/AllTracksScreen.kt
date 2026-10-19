@@ -47,7 +47,9 @@ import com.amoled.music.ui.theme.AmoledWhite
 @Composable
 fun AllTracksScreen(
     songs: List<Song>,
-    playbackState: PlaybackState,
+    playbackState: PlaybackState? = null,
+    currentSongId: Long? = playbackState?.currentSong?.id,
+    isPlaying: Boolean = playbackState?.isPlaying ?: false,
     searchQuery: String = "",
     isScanning: Boolean = false,
     isInitialLoading: Boolean = false,
@@ -226,11 +228,12 @@ fun AllTracksScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 120.dp)
                 ) {
-                    itemsIndexed(filteredSongs, key = { index, song -> "${song.id}_$index" }) { index, song ->
-                        val isCurrentTrack = playbackState.currentSong?.id == song.id
+                    itemsIndexed(filteredSongs, key = { _, song -> song.id }) { index, song ->
+                        val isCurrentTrack = currentSongId == song.id
                         SwipeableSongItem(
                             song = song,
                             isCurrentTrack = isCurrentTrack,
+                            isPlaying = isCurrentTrack && isPlaying,
                             onPlayNext = { onPlayNext(song) },
                             onAddToGroup = { onAddToGroup(song) },
                             onClick = { onSongClick(index, filteredSongs) }

@@ -38,15 +38,17 @@ android {
     kotlinOptions {
         jvmTarget = "17"
         freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.media3.common.util.UnstableApi"
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
         )
     }
     buildFeatures {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
     packaging {
         resources {
@@ -97,6 +99,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
 
     // Debugging UI
     debugImplementation("androidx.compose.ui:ui-tooling")

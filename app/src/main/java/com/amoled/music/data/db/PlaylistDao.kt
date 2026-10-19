@@ -58,4 +58,25 @@ interface PlaylistDao {
 
     @Query("SELECT * FROM playlists ORDER BY id ASC")
     suspend fun getAllPlaylistsSync(): List<PlaylistEntity>
+
+    @Transaction
+    suspend fun insertPlaylistWithSongs(playlist: PlaylistEntity, songs: List<PlaylistSongEntity>): Long {
+        val id = insertPlaylist(playlist)
+        val songsWithId = songs.map { it.copy(playlistId = id) }
+        insertPlaylistSongs(songsWithId)
+        return id
+    }
+
+    @Transaction
+    suspend fun updatePlaylistWithSongs(playlist: PlaylistEntity, songs: List<PlaylistSongEntity>) {
+        updatePlaylist(playlist)
+        clearPlaylistSongs(playlist.id)
+        insertPlaylistSongs(songs)
+    }
+
+    @Transaction
+    suspend fun deletePlaylistWithSongs(playlistId: Long) {
+        deletePlaylist(playlistId)
+        clearPlaylistSongs(playlistId)
+    }
 }

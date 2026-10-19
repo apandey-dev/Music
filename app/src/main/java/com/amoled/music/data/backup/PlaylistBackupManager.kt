@@ -22,16 +22,23 @@ class PlaylistBackupManager(private val context: Context) {
     private fun getBackupDirectories(): List<File> {
         val dirs = mutableListOf<File>()
 
-        // 1. Documents/AmoledMusic (Persists across uninstalls on Android 10+)
-        val docDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "AmoledMusic")
-        dirs.add(docDir)
+        // 1. App-specific external files (Primary scoped storage path, persistent and permission-free)
+        context.getExternalFilesDir(null)?.let { dirs.add(File(it, "backups")) }
 
-        // 2. Music/AmoledPlaylists (Persists across uninstalls)
-        val musicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "AmoledPlaylists")
-        dirs.add(musicDir)
+        // 2. App-specific internal files (Guaranteed always writable even without external storage)
+        dirs.add(File(context.filesDir, "backups"))
 
-        // 3. App-specific external files (fallback)
-        context.getExternalFilesDir(null)?.let { dirs.add(it) }
+        // 3. Documents/AmoledMusic (Public fallback for shared storage environments)
+        try {
+            val docDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "AmoledMusic")
+            dirs.add(docDir)
+        } catch (_: Exception) { }
+
+        // 4. Music/AmoledPlaylists (Public music fallback)
+        try {
+            val musicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "AmoledPlaylists")
+            dirs.add(musicDir)
+        } catch (_: Exception) { }
 
         return dirs
     }

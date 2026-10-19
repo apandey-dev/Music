@@ -48,28 +48,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadFolders()
         scanSongs(isManual = false)
-        observePlaybackForWidgets()
     }
 
     private fun loadFolders() {
         _scannedFolders.value = repository.folderManager.getCustomFolders()
-    }
-
-    private fun observePlaybackForWidgets() {
-        viewModelScope.launch {
-            playbackState.collect { state ->
-                val song = state.currentSong
-                val title = song?.title ?: "Music"
-                val subtitle = if (song != null) "${song.artist} • ${state.currentPlaylistName}" else "Tap to play"
-                PlaylistWidgetProvider.updateAllWidgets(
-                    context = getApplication(),
-                    title = title,
-                    subtitle = subtitle,
-                    bannerUriString = song?.albumArtUriString,
-                    isPlaying = state.isPlaying
-                )
-            }
-        }
     }
 
     fun scanSongs(isManual: Boolean = false) {

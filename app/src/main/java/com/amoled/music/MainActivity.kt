@@ -144,9 +144,6 @@ fun MainAppContent(
         showFullPlayer = false
     }
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
     // Permissions
     val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         listOf(
@@ -304,7 +301,8 @@ fun MainAppContent(
                                 // 1. Songs Tab
                                 AllTracksScreen(
                                     songs = deviceSongs,
-                                    playbackState = playbackState,
+                                    currentSongId = playbackState.currentSong?.id,
+                                    isPlaying = playbackState.isPlaying,
                                     searchQuery = searchQuery,
                                     isScanning = isScanning,
                                     isInitialLoading = isInitialLoading,
@@ -391,7 +389,9 @@ fun MainAppContent(
                         PlaylistDetailScreen(
                             playlist = playlistData.playlist,
                             songs = playlistData.songs,
-                            playbackState = playbackState,
+                            currentSongId = playbackState.currentSong?.id,
+                            isPlaying = playbackState.isPlaying,
+                            currentPlaylistId = playbackState.currentPlaylistId,
                             onBack = { navController.popBackStack() },
                             onPlayAll = {
                                 viewModel.playPlaylist(

@@ -39,33 +39,34 @@ class AudioScanner(private val context: Context) {
                 }
             }
         } else {
-            // 2. Default: Scan standard MediaStore music + Standard Music / Download directories
+            // 2. Default: Scan standard MediaStore music
             val mediaStoreSongs = scanMediaStore()
             for (song in mediaStoreSongs) {
                 val key = if (song.dataPath.isNotBlank()) song.dataPath else song.title + song.artist
                 songMap[key] = song
             }
 
-            val defaultDirs = listOf(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                File(Environment.getExternalStorageDirectory(), "Music"),
-                File(Environment.getExternalStorageDirectory(), "Download")
-            )
+            // Fallback for pre-Android 10 legacy devices where MediaStore may not have finished indexing
+            if (mediaStoreSongs.isEmpty() && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                val defaultDirs = listOf(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                )
 
-            for (dir in defaultDirs) {
-                try {
-                    if (dir.exists() && dir.canRead()) {
-                        val diskSongs = folderScanner.scanDirectFileDirectory(dir)
-                        for (song in diskSongs) {
-                            val key = if (song.dataPath.isNotBlank()) song.dataPath else song.title + song.artist
-                            if (!songMap.containsKey(key)) {
-                                songMap[key] = song
+                for (dir in defaultDirs) {
+                    try {
+                        if (dir.exists() && dir.canRead()) {
+                            val diskSongs = folderScanner.scanDirectFileDirectory(dir)
+                            for (song in diskSongs) {
+                                val key = if (song.dataPath.isNotBlank()) song.dataPath else song.title + song.artist
+                                if (!songMap.containsKey(key)) {
+                                    songMap[key] = song
+                                }
                             }
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error scanning default dir ${dir.absolutePath}: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error scanning default dir ${dir.absolutePath}: ${e.message}")
                 }
             }
         }

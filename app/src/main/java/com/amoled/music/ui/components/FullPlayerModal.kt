@@ -33,7 +33,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
@@ -196,7 +196,7 @@ fun FullPlayerModal(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.QueueMusic,
+                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                             contentDescription = "Queue",
                             tint = AmoledWhite,
                             modifier = Modifier.size(22.dp)
@@ -287,7 +287,21 @@ fun FullPlayerModal(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Material 3 Expressive Animated Visualizer
+                AmoledExpressiveVisualizer(
+                    isPlaying = playbackState.isPlaying,
+                    barCount = 28,
+                    maxHeight = 26.dp,
+                    minHeight = 4.dp,
+                    barColor = ExpressiveLavender.copy(alpha = 0.9f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Progress Bar & Dual Timestamps
                 Column(

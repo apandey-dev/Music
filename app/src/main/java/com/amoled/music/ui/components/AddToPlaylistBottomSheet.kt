@@ -17,8 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -160,7 +160,7 @@ fun AddToPlaylistBottomSheet(
                             },
                             trailingContent = {
                                 Icon(
-                                    imageVector = Icons.Default.PlaylistAdd,
+                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                                     contentDescription = "Add",
                                     tint = AmoledWhite,
                                     modifier = Modifier.size(20.dp)

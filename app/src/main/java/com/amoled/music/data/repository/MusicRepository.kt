@@ -68,36 +68,35 @@ class MusicRepository(private val context: Context) {
     }
 
     suspend fun createPlaylist(name: String, bannerUri: String?, songs: List<Song>): Long {
-        val id = playlistDao.insertPlaylist(
+        val songEntities = songs.mapIndexed { index, song ->
+            PlaylistSongEntity.fromSong(0L, song, index)
+        }
+        val id = playlistDao.insertPlaylistWithSongs(
             PlaylistEntity(
                 name = name.trim().ifEmpty { "My Playlist" },
                 bannerUriString = bannerUri,
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
-            )
+            ),
+            songEntities
         )
-        val songEntities = songs.mapIndexed { index, song ->
-            PlaylistSongEntity.fromSong(id, song, index)
-        }
-        playlistDao.insertPlaylistSongs(songEntities)
         backupManager.saveBackup()
         return id
     }
 
     suspend fun updatePlaylist(playlistId: Long, name: String, bannerUri: String?, songs: List<Song>) {
         val existing = playlistDao.getPlaylistById(playlistId) ?: return
-        playlistDao.updatePlaylist(
+        val songEntities = songs.mapIndexed { index, song ->
+            PlaylistSongEntity.fromSong(playlistId, song, index)
+        }
+        playlistDao.updatePlaylistWithSongs(
             existing.copy(
                 name = name.trim().ifEmpty { existing.name },
                 bannerUriString = bannerUri ?: existing.bannerUriString,
                 updatedAt = System.currentTimeMillis()
-            )
+            ),
+            songEntities
         )
-        playlistDao.clearPlaylistSongs(playlistId)
-        val songEntities = songs.mapIndexed { index, song ->
-            PlaylistSongEntity.fromSong(playlistId, song, index)
-        }
-        playlistDao.insertPlaylistSongs(songEntities)
         backupManager.saveBackup()
     }
 
@@ -111,8 +110,7 @@ class MusicRepository(private val context: Context) {
     }
 
     suspend fun deletePlaylist(playlistId: Long) {
-        playlistDao.deletePlaylist(playlistId)
-        playlistDao.clearPlaylistSongs(playlistId)
+        playlistDao.deletePlaylistWithSongs(playlistId)
         backupManager.saveBackup()
     }
 
